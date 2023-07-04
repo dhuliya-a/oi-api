@@ -31,6 +31,7 @@ app.use('/groups', groupsController.getRouter());
 app.use('/events', eventsController.getRouter());
 
 app.listen(port, () => {
+  console.log(process.env.PORT);
   console.log(`Server running at http://localhost:${port}`);
 });
 
