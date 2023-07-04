@@ -1,26 +1,32 @@
-import { Request, Response, Router } from 'express';
-import { UserModel, IUser } from '../models/user.model.js'; 
-import { ChatMessageModel } from '../models/chatMessage.model.js';
+
 import { Server } from 'socket.io';
-import { createServer } from 'http';
-import server from '../index.js';
+import { ChatMessageModel } from '../models/chatMessage.model.js';
 
-const io = new Server(createServer(server));
-
+export function startSocketServer(server) {
+  const io = new Server(server);
+  // Rest of the code
+  
 // Socket.IO event handlers
 io.on('connection', (socket) => {
   console.log('A user connected');
 
   // Handle chat events
   socket.on('joinEventChat', (eventId) => {
+    console.log('Join chat', eventId);
+
     socket.join(eventId);
   });
 
+
   socket.on('leaveEventChat', (eventId) => {
+    console.log('Leave chat', eventId);
+
     socket.leave(eventId);
   });
 
   socket.on('newMessage', (data) => {
+    console.log('New message',data.message);
+
     // Save the message to the database
     const newMessage = new ChatMessageModel({
       eventId: data.eventId,
@@ -40,5 +46,4 @@ io.on('connection', (socket) => {
     console.log('A user disconnected');
   });
 });
-
-module.exports = io;
+}

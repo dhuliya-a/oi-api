@@ -83,7 +83,7 @@ export class EventsController {
                     return res.status(404).json({ message: 'Event not found.' });
                 }
                 invitees.forEach(user => {
-                    event.invitees.push({ "userId": user._id, "status": StatusEnum.PENDING, "visited": false });
+                    event.invitees.push({ "userId": user, "status": StatusEnum.PENDING, "visited": false });
                 });
                 event.save();
                 res.status(200).json(event);
@@ -165,7 +165,34 @@ export class EventsController {
                     invitee.status = StatusEnum.REJECTED;
                     // Save the updated event
                     await event.save();
-                    res.status(200).json({ message: 'User removed from event' });
+                    res.status(200).json({ message: 'User rejected event invite' });
+                }
+                else {
+                    res.status(200).json({ message: 'User not in event' });
+                }
+            }
+            catch (error) {
+                console.log(error);
+                res.status(500).json({ message: 'Failed to remove user.' });
+            }
+        };
+        this.eventInviteVisited = async (req, res) => {
+            try {
+                const { eventId, userId } = req.params;
+                const user = await UserModel.findById(userId);
+                const event = await EventModel.findById(eventId);
+                if (!event) {
+                    return res.status(404).json({ message: 'Event not found.' });
+                }
+                if (!user) {
+                    return res.status(404).json({ message: 'User not found.' });
+                }
+                const invitee = event.invitees.find((invitee) => invitee.userId.equals(userId));
+                if (invitee) {
+                    invitee.visited = true;
+                    // Save the updated event
+                    await event.save();
+                    res.status(200).json({ message: 'User visited event invite' });
                 }
                 else {
                     res.status(200).json({ message: 'User not in event' });
@@ -194,15 +221,17 @@ export class EventsController {
         //Update event details
         this.router.put('/:eventId', this.updateEventDetails);
         //Add a user, or list of users to an event - req body will have the list of users
-        this.router.post('/:eventId', this.addUsersToEvent);
+        this.router.post('/:eventId/add', this.addUsersToEvent);
         //TODO - add one for adding a user to an event
-        this.router.post('/:eventId/add/user', this.addUsersToEvent);
+        // this.router.post('/:eventId/add/user', this.addUsersToEvent);
         //Remove a user from an event (user can choose to exit too)
         this.router.post('/:eventId/remove/:userId', this.removeUserFromEvent);
         //Remove a user from an event (user can choose to exit too)
         this.router.post('/:eventId/accept/:userId', this.acceptEvent);
         //Remove a user from an event (user can choose to exit too)
         this.router.post('/:eventId/reject/:userId', this.rejectEvent);
+        //Updates a user's visited status to true
+        this.router.post('/:eventId/visited/:userId', this.eventInviteVisited);
     }
 }
 //# sourceMappingURL=events.controller.js.map
