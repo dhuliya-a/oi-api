@@ -132,24 +132,24 @@ export class UsersController {
         };
         this.getUserUnreadEvents = async (req, res) => {
             try {
-                // res.status(200).json(events);
-            }
-            catch (error) {
-                console.log(error);
-                res.status(500).json({ message: 'Unable to get unread events for user' });
-            }
-        };
-        this.getUserPendingEventInvites = async (req, res) => {
-            try {
                 const { userId } = req.params;
                 const user = await UserModel.findById(userId);
                 if (!user) {
                     return res.status(404).json({ message: 'User not found.' });
                 }
+                const events = await EventModel.find({
+                    invitees: {
+                        $elemMatch: {
+                            userId: userId,
+                            visited: { $not: { $eq: true } }
+                        }
+                    }
+                });
+                res.status(200).json(events);
             }
             catch (error) {
                 console.log(error);
-                res.status(500).json({ message: 'Unable to get pending event invites for user' });
+                res.status(500).json({ message: 'Unable to get user events' });
             }
         };
         this.router = Router();
@@ -171,8 +171,6 @@ export class UsersController {
         this.router.get('/:userId/friends', this.getUserFriends);
         //Show unread events for a userId
         this.router.get('/:userId/unread', this.getUserUnreadEvents);
-        //Show unread events for a userId
-        // this.router.get('/:userId/invites', this.getUserPendingEventInvites);
     }
 }
 //# sourceMappingURL=users.controller.js.map
