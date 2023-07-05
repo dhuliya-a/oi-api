@@ -51,10 +51,10 @@ server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
-const username = process.env.DB_USERNAME || "pachizar_mongodb";
-const password = process.env.DB_PASSWORD || "Instagram@01";
+const username = process.env.DB_USERNAME;
+const password = process.env.DB_PASSWORD;
 const encodedPassword = encodeURIComponent(password);
-const clusterName = process.env.DB_CLUSTER || "cluster0.tljbuxq.mongodb.net";
+const clusterName = process.env.DB_CLUSTER;
 const connectionString = `mongodb+srv://${username}:${encodedPassword}@${clusterName}/?retryWrites=true&w=majority`;
 
 mongoose
