@@ -1,11 +1,6 @@
 import { Schema, Document, model } from 'mongoose';
 import { ObjectId } from 'mongodb';
-
-const StatusEnum = Object.freeze({
-  ACCEPTED: 'accepted',
-  PENDING: 'pending',
-  REJECTED: 'rejected'
-});
+import StatusEnum from '../util/statusEnum.js';
 
 interface IConnection extends Document {
   user1: ObjectId,

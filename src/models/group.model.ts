@@ -1,12 +1,14 @@
 import {Schema, model, Document, Types} from 'mongoose';
 import {ObjectId} from 'mongodb';
+import { UserDetails, UserDetailsSchema } from '../util/userDetails.interface.js';
 
 interface IGroup extends Document {
   creator: ObjectId;
   groupName: string;
   createdAt: Date;
   imageUrl: string;
-  members: ObjectId[];
+  members: UserDetails[];
+  subject: string;
 }
 
 const GroupSchema = new Schema<IGroup>({
@@ -14,8 +16,9 @@ const GroupSchema = new Schema<IGroup>({
   groupName: {type: String, required: true},
   createdAt: {type: Date, required: true},
   imageUrl: {type: String, default: null},
+  subject: {type: String, default: null},
   //TODO - Look into the default value
-  members: [{ type: ObjectId, ref: 'Users', required: true, default: [] }]
+  members: [{ type: UserDetailsSchema, required: true, default: [] }]
 })
 
 const GroupModel = model<IGroup>('Groups', GroupSchema);

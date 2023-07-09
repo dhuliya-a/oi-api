@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { GroupModel, IGroup } from '../models/group.model.js';
 import { UserModel, IUser } from '../models/user.model.js';
 import { ObjectId } from 'mongodb';
+import { UserDetails, UserDetailsSchema } from '../util/userDetails.interface.js';
 
 export class GroupsController {
 
@@ -20,7 +21,7 @@ export class GroupsController {
     this.router.post('/', this.createGroup);
     this.router.get('/:groupId', this.getGroupById);
     // end point to add a friend to a group
-    this.router.post('/:groupId/add/:userId', this.addFriendToGroup);
+    // this.router.post('/:groupId/add/:userId', this.addFriendToGroup);
     this.router.post('/:groupId/add', this.addFriendsToGroup);
     // end point to remove a friend from a group (a user can choose to exit too)
     this.router.post('/:groupId/remove/:userId', this.removeFriendFromGroup);
@@ -32,13 +33,14 @@ export class GroupsController {
 
   private createGroup = async (req, res) => {
     try{
-      const {creator, groupName, imageUrl, members} = req.body;
+      const {creator, groupName, imageUrl, members, subject} = req.body;
       //Creator should by default be a member - client should send the creator Id in members list
       const newGroup : IGroup = new GroupModel({
         creator,
         groupName,
         imageUrl,
         members,
+        subject,
         createdAt: new Date()
       });
   
@@ -65,25 +67,25 @@ export class GroupsController {
     }
   }
 
-  private addFriendToGroup = async (req, res) => {
-    try{
-      const {groupId, userId} = req.params; 
-      const group : IGroup = await GroupModel.findById(groupId);
-      if (!group) {
-        return res.status(404).json({ message: 'Group not found.' });
-      }
-      const user : IUser = await UserModel.findById(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
-      }
-      group.members.push(user._id);
-      group.save();
-      res.status(200).json(group);
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({ message: 'Failed to add friend.' });
-    }
-  }
+  // private addFriendToGroup = async (req, res) => {
+  //   try{
+  //     const {groupId, userId} = req.params; 
+  //     const group : IGroup = await GroupModel.findById(groupId);
+  //     if (!group) {
+  //       return res.status(404).json({ message: 'Group not found.' });
+  //     }
+  //     const user : IUser = await UserModel.findById(userId);
+  //     if (!user) {
+  //       return res.status(404).json({ message: 'User not found.' });
+  //     }
+  //     group.members.push({"userId":user._id,"userName":user.userName, "fullName":user.fullName,"imageUrl":user.imageUrl});
+  //     group.save();
+  //     res.status(200).json(group);
+  //   } catch (error) {
+  //     console.log(error);
+  //     res.status(500).json({ message: 'Failed to add friend.' });
+  //   }
+  // }
 
   private addFriendsToGroup = async (req, res) => {
     try{
@@ -98,7 +100,7 @@ export class GroupsController {
         return res.status(404).json({ message: 'Users not found.' });
       }
       users.forEach(user => {
-        group.members.push(user._id);
+        group.members.push({"userId":user._id,"userName":user.userName, "fullName":user.fullName,"imageUrl":user.imageUrl});
       });
       group.save();
       res.status(200).json(group);
@@ -115,9 +117,10 @@ export class GroupsController {
       if (!group) {
         return res.status(404).json({ message: 'Group not found.' });
       }
-      if(group.members.includes(userId)){
-        const currentMembers = group.members as [ObjectId];
-        const updatedMembers = currentMembers.filter(objectId => !objectId.equals(userId)) as [ObjectId];
+      const memberIds: String[] = group.members.map((member: UserDetails) => member.userId.toString());
+      if(memberIds.includes(userId)){
+        const currentMembers = group.members as [UserDetails];
+        const updatedMembers = currentMembers.filter(userDetails => !userDetails.userId.equals(userId)) as [UserDetails];
         group.members = updatedMembers;
         group.save();
         res.status(200).json({message: 'User removed from group'});  
@@ -135,14 +138,15 @@ export class GroupsController {
   private updateGroupDetails = async (req: Request, res: Response) => {
     try {
       const { groupId } = req.params;
-      const {creator, groupName, imageUrl} = req.body;
+      const {creator, groupName, imageUrl, subject} = req.body;
   
       const updatedGroup : IGroup = await GroupModel.findByIdAndUpdate(
         groupId,
         {
           creator,
           groupName,
-          imageUrl
+          imageUrl,
+          subject
         },
         { new: true }
       );
