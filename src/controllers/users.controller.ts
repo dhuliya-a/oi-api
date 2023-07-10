@@ -28,21 +28,22 @@ export class UsersController {
     //List of events a user is a part of [IEvent]
     this.router.get('/:userId/events', this.getUserEvents);
     //Create an end point to get all the friends, [IUser] of a user
-    this.router.get('/:userId/friends', this.getUserFriends);
+    this.router.get('/:userId/connections', this.getUserConnections);
     //Show unread events for a userId
-    this.router.get('/:userId/unread', this.getUserUnreadEvents);
+    // this.router.get('/:userId/unread', this.getUserUnreadEvents);
   }
   
   // Create a new user
   private createUser = async (req: Request, res: Response) => {
     try {
-      const { emailId, password, username, imageUrl } = req.body;
+      const { emailId, password, userName, imageUrl, fullName } = req.body;
   
       const newUser: IUser = new UserModel({
         emailId,
         password,
-        username,
+        userName,
         imageUrl,
+        fullName,
         createdAt: new Date()
       });
   
@@ -76,15 +77,16 @@ export class UsersController {
   private updateUser = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
-      const { emailId, password, username, imageUrl, unreadEvents } = req.body;
+      const { emailId, password, userName, imageUrl, fullName } = req.body;
   
       const updatedUser : IUser = await UserModel.findByIdAndUpdate(
         userId,
         {
           emailId,
           password,
-          username,
-          imageUrl
+          userName,
+          imageUrl,
+          fullName
         },
         { new: true }
       );
@@ -125,7 +127,7 @@ export class UsersController {
       if (!user) {
         return res.status(404).json({ message: 'User not found.' });
       }
-      const groups = await GroupModel.find({ members: userId });
+      const groups = await GroupModel.find({ "members.userId": userId });
       res.status(200).json(groups);
     } catch (error) {
       console.log(error);
@@ -133,7 +135,7 @@ export class UsersController {
     }
   }
 
-  
+  //TODO - Update to get list of sent, and list of received.
   private getUserEvents = async (req, res) => {
     try {
      const { userId} = req.params; 
@@ -141,17 +143,26 @@ export class UsersController {
      if (!user) {
        return res.status(404).json({ message: 'User not found.' });
      }
-     const events : IEvent[] = await EventModel.find({ "invitees.userId": userId });
-     res.status(200).json(events);
+     const sentEvents : IEvent[] = await EventModel.find({"creator": userId}); 
+     const receivedEvents: IEvent[] = await EventModel.find({
+      "invitees.userDetails.userId": userId,
+      "invitees.status": StatusEnum.PENDING
+    });
+      // { "invitees.userDetails.userId": userId, "invitees.status": StatusEnum.PENDING });
+     
+     const eventLists = {
+      sentEvents: sentEvents,
+      receivedEvents: receivedEvents
+     }
+     res.status(200).json(eventLists);
     }
     catch(error){
       console.log(error);
      res.status(500).json({message: 'Unable to get user events'});
     }
    }
-
    
-  private getUserFriends = async (req, res) => {
+  private getUserConnections = async (req, res) => {
     try{
       const {userId} = req.params;
       const user : IUser = await UserModel.findById(userId);
@@ -159,21 +170,40 @@ export class UsersController {
         return res.status(404).json({ message: 'User not found.' });
       }
 
+      const pendingConnectionsList: IConnection[] = await ConnectionModel.find({
+        $or: [{ user1: userId }, { user2: userId }],
+        status: StatusEnum.PENDING
+      });
+  
+      // Extract the friend IDs from the connections
+      const pendingIds: ObjectId[] = pendingConnectionsList.map((connection: IConnection) =>
+        connection.user1.equals(userId) ? connection.user2 : connection.user1
+      );
+  
+      // Fetch the friend objects from the UserModel
+      //TODO - While creating the friend list, it should have details such as name, user name, image, id, etc.
+      const pendingConnections: IUser[] = await UserModel.find({ _id: { $in: pendingIds } });
+
     // Fetch all connections where the given user is involved
-    const connections: IConnection[] = await ConnectionModel.find({
+    const acceptedConnectionsList: IConnection[] = await ConnectionModel.find({
       $or: [{ user1: userId }, { user2: userId }],
       status: StatusEnum.ACCEPTED
     });
 
     // Extract the friend IDs from the connections
-    const friendIds: ObjectId[] = connections.map((connection: IConnection) =>
+    const acceptedIds: ObjectId[] = acceptedConnectionsList.map((connection: IConnection) =>
       connection.user1.equals(userId) ? connection.user2 : connection.user1
     );
 
     // Fetch the friend objects from the UserModel
-    const friendList: IUser[] = await UserModel.find({ _id: { $in: friendIds } });
-
-    res.status(200).json(friendList);
+    //TODO - While creating the friend list, it should have details such as name, user name, image, id, etc.
+    const acceptedConnections: IUser[] = await UserModel.find({ _id: { $in: acceptedIds } });
+     
+    const connectionLists = {
+      pendingConnectionsList: pendingConnections,
+      acceptedConnectionsList: acceptedConnections
+     }
+     res.status(200).json(connectionLists);
     }
     catch (error){
       console.log(error);
@@ -181,26 +211,26 @@ export class UsersController {
     }
   }
 
-  private getUserUnreadEvents = async (req, res) => {
-    try {
-      const { userId} = req.params; 
-      const user : IUser = await UserModel.findById(userId);     
-      if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
-      }
-      const events: IEvent[] = await EventModel.find({
-        invitees: {
-          $elemMatch: {
-            userId: userId,
-            visited: { $not: { $eq: true } }
-          }
-        }
-      });
-      res.status(200).json(events);
-     }
-     catch(error){
-       console.log(error);
-      res.status(500).json({message: 'Unable to get user events'});
-     }
-  }
+  // private getUserUnreadEvents = async (req, res) => {
+  //   try {
+  //     const { userId} = req.params; 
+  //     const user : IUser = await UserModel.findById(userId);     
+  //     if (!user) {
+  //       return res.status(404).json({ message: 'User not found.' });
+  //     }
+  //     const events: IEvent[] = await EventModel.find({
+  //       invitees: {
+  //         $elemMatch: {
+  //           userId: userId,
+  //           visited: { $not: { $eq: true } }
+  //         }
+  //       }
+  //     });
+  //     res.status(200).json(events);
+  //    }
+  //    catch(error){
+  //      console.log(error);
+  //     res.status(500).json({message: 'Unable to get user events'});
+  //    }
+  // }
 }

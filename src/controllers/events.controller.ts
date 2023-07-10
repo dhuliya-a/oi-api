@@ -38,12 +38,13 @@ export class EventsController {
     //Remove a user from an event (user can choose to exit too)
     this.router.post('/:eventId/reject/:userId', this.rejectEvent);  
     //Updates a user's visited status to true
-    this.router.post('/:eventId/visited/:userId', this.eventInviteVisited);  
+    // this.router.post('/:eventId/visited/:userId', this.eventInviteVisited);  
   }
 
    private saveEvent = async (req: Request, res: Response) => {
     try {
-      const { eventName, creator, location, eventTime, imageUrl, invitees } = req.body;
+      const { eventName, creator, location, eventTime, imageUrl, invitees, subject } = req.body;
+      //TODO - Build invitees list, for each invitee need user details from db. From front-end
       const newEvent: IEvent = new EventModel({
         eventName,
         creator,
@@ -51,7 +52,8 @@ export class EventsController {
         location,
         eventTime,
         imageUrl,
-        invitees
+        invitees,
+        subject
       });
   
       const savedEvent = await newEvent.save();
@@ -83,15 +85,16 @@ export class EventsController {
   private updateEventDetails = async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
-      const { eventName, location, eventTime, imageUrl  } = req.body;
+      const { eventName, location, eventTime, imageUrl, subject  } = req.body;
   
       const updatedEvent : IEvent = await EventModel.findByIdAndUpdate(
         eventId,
         {
           eventName, 
           location, 
-          eventTime, 
-          imageUrl
+          eventTime,
+          imageUrl,
+          subject
         },
         { new: true }
       );
@@ -134,7 +137,10 @@ export class EventsController {
         return res.status(404).json({ message: 'Event not found.' });
       }
       invitees.forEach(user => {
-        event.invitees.push({"userId":user,"status":StatusEnum.PENDING, "visited":false});
+        event.invitees.push(
+          {
+            "userDetails":{"userId":user.userId,"userName":user.userName, "imageUrl":user.imageUrl, "fullName":user.fullName },
+            "status":StatusEnum.PENDING});
       });
       event.save();
       res.status(200).json(event);
@@ -155,11 +161,11 @@ export class EventsController {
       if (!user) {
        return res.status(404).json({ message: 'User not found.' });
       }
-      const inviteesId = event.invitees.map((invite)=>invite.userId);
+      const inviteesId = event.invitees.map((invite)=>invite.userDetails.userId);
       const validUserId = new ObjectId(userId);
       if (inviteesId.some((inviteeId) => inviteeId.equals(validUserId))) {
         const currentinvitees = event.invitees as [UserInviteStatus];
-        const updatedinvitees = currentinvitees.filter((userStatus) => !userStatus.userId.equals(userId)) as [UserInviteStatus];
+        const updatedinvitees = currentinvitees.filter((userStatus) => !userStatus.userDetails.userId.equals(userId)) as [UserInviteStatus];
         event.invitees = updatedinvitees;
         event.save();
         res.status(200).json({message: 'User removed from event'});  
@@ -185,7 +191,7 @@ export class EventsController {
       if (!user) {
        return res.status(404).json({ message: 'User not found.' });
       }
-      const invitee = event.invitees.find((invitee) => invitee.userId.equals(userId));
+      const invitee = event.invitees.find((invitee) => invitee.userDetails.userId.equals(userId));
       if(invitee){
         invitee.status = StatusEnum.ACCEPTED;
         // Save the updated event
@@ -213,7 +219,7 @@ export class EventsController {
       if (!user) {
        return res.status(404).json({ message: 'User not found.' });
       }
-      const invitee = event.invitees.find((invitee) => invitee.userId.equals(userId));
+      const invitee = event.invitees.find((invitee) => invitee.userDetails.userId.equals(userId));
       if(invitee){
         invitee.status = StatusEnum.REJECTED;
         // Save the updated event
@@ -230,31 +236,31 @@ export class EventsController {
     }
   }
 
-  private eventInviteVisited = async (req, res) => {
-    try{
-      const {eventId, userId} = req.params; 
-      const user : IUser = await UserModel.findById(userId);
-      const event : IEvent = await EventModel.findById(eventId);
-      if (!event) {
-        return res.status(404).json({ message: 'Event not found.' });
-      }
-      if (!user) {
-       return res.status(404).json({ message: 'User not found.' });
-      }
-      const invitee = event.invitees.find((invitee) => invitee.userId.equals(userId));
-      if(invitee){
-        invitee.visited = true;
-        // Save the updated event
-        await event.save();
-        res.status(200).json({message: 'User visited event invite'});  
-      }
-      else{
-        res.status(200).json({message: 'User not in event'});  
-      }
-    }
-    catch(error){
-      console.log(error);
-      res.status(500).json({ message: 'Failed to remove user.' });
-    }
-  }
+  // private eventInviteVisited = async (req, res) => {
+  //   try{
+  //     const {eventId, userId} = req.params; 
+  //     const user : IUser = await UserModel.findById(userId);
+  //     const event : IEvent = await EventModel.findById(eventId);
+  //     if (!event) {
+  //       return res.status(404).json({ message: 'Event not found.' });
+  //     }
+  //     if (!user) {
+  //      return res.status(404).json({ message: 'User not found.' });
+  //     }
+  //     const invitee = event.invitees.find((invitee) => invitee.userId.equals(userId));
+  //     if(invitee){
+  //       invitee.visited = true;
+  //       // Save the updated event
+  //       await event.save();
+  //       res.status(200).json({message: 'User visited event invite'});  
+  //     }
+  //     else{
+  //       res.status(200).json({message: 'User not in event'});  
+  //     }
+  //   }
+  //   catch(error){
+  //     console.log(error);
+  //     res.status(500).json({ message: 'Failed to remove user.' });
+  //   }
+  // }
 }

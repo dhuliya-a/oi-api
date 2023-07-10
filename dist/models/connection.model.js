@@ -1,10 +1,6 @@
 import { Schema, model } from 'mongoose';
 import { ObjectId } from 'mongodb';
-const StatusEnum = Object.freeze({
-    ACCEPTED: 'accepted',
-    PENDING: 'pending',
-    REJECTED: 'rejected'
-});
+import StatusEnum from '../util/statusEnum.js';
 const ConnectionSchema = new Schema({
     user1: { type: ObjectId, required: true, ref: 'Users' },
     user2: { type: ObjectId, required: true, ref: 'Users' },
