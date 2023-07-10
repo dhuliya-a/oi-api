@@ -19,7 +19,7 @@ export class UsersController {
   }
 
   private initializeRoutes(): void {
-    this.router.get('/:userId', this.getUserById);
+    this.router.get('/:emailId', this.getUserById);
     this.router.post('/', this.createUser);
     this.router.put('/:userId', this.updateUser);
     this.router.delete('/:userId', this.deleteUser);
@@ -59,10 +59,10 @@ export class UsersController {
   // Get a user by ID
   private getUserById = async (req: Request, res: Response) => {
     try {
-      const { userId } = req.params;
-      const validUserId = new ObjectId(userId);
-      const user : IUser = await UserModel.findById(validUserId);
-  
+      const { emailId } = req.params;
+      // const validUserId = new ObjectId(emailId);
+      const user : IUser = await UserModel.findOne({emailId: emailId});
+      
       if (!user) {
         return res.status(404).json({ message: 'User not found.' });
       }
