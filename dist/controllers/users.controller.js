@@ -3,7 +3,6 @@ import { UserModel } from '../models/user.model.js';
 import { GroupModel } from '../models/group.model.js';
 import { EventModel } from '../models/event.model.js';
 import { ConnectionModel, StatusEnum } from '../models/connection.model.js';
-import { ObjectId } from 'mongodb';
 export class UsersController {
     constructor() {
         // Create a new user
@@ -29,9 +28,9 @@ export class UsersController {
         // Get a user by ID
         this.getUserById = async (req, res) => {
             try {
-                const { userId } = req.params;
-                const validUserId = new ObjectId(userId);
-                const user = await UserModel.findById(validUserId);
+                const { emailId } = req.params;
+                // const validUserId = new ObjectId(emailId);
+                const user = await UserModel.findOne({ emailId: emailId });
                 if (!user) {
                     return res.status(404).json({ message: 'User not found.' });
                 }
@@ -164,7 +163,7 @@ export class UsersController {
         return this.router;
     }
     initializeRoutes() {
-        this.router.get('/:userId', this.getUserById);
+        this.router.get('/:emailId', this.getUserById);
         this.router.post('/', this.createUser);
         this.router.put('/:userId', this.updateUser);
         this.router.delete('/:userId', this.deleteUser);
