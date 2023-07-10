@@ -19,7 +19,8 @@ export class UsersController {
   }
 
   private initializeRoutes(): void {
-    this.router.get('/:emailId', this.getUserById);
+    this.router.get('/:emailId', this.getUserByEmailId);
+    this.router.get('/id/:userId', this.getUserById);
     this.router.post('/', this.createUser);
     this.router.put('/:userId', this.updateUser);
     this.router.delete('/:userId', this.deleteUser);
@@ -57,11 +58,28 @@ export class UsersController {
   };
     
   // Get a user by ID
-  private getUserById = async (req: Request, res: Response) => {
+  private getUserByEmailId = async (req: Request, res: Response) => {
     try {
       const { emailId } = req.params;
       // const validUserId = new ObjectId(emailId);
       const user : IUser = await UserModel.findOne({emailId: emailId});
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+      res.status(200).json(user);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: 'Failed to fetch user.' });
+    }
+  };
+
+   // Get a user by ID
+   private getUserById = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const validUserId = new ObjectId(userId);
+      const user : IUser = await UserModel.findById(validUserId);
       
       if (!user) {
         return res.status(404).json({ message: 'User not found.' });
